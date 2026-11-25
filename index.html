@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MY TRIP — Travel Planner</title>
+<style>
+:root{--green:#286f61;--green2:#e8f2ee;--ink:#26352f;--muted:#7b8982;--line:#e5ece8;--bg:#f5f8f6;--white:#fff;--red:#b94a48}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input,select,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;background:var(--green2);color:var(--green);font-weight:650}button.primary{background:var(--green);color:white}button.danger{background:#fff0ef;color:var(--red)}button.small{padding:7px 10px;font-size:13px}
+.app{min-height:100vh}.sidebar{position:fixed;inset:0 auto 0 0;width:245px;background:white;border-right:1px solid var(--line);padding:25px 16px;overflow:auto}.brand{font-size:27px;font-weight:850;letter-spacing:1px}.tag{font-size:11px;color:#9aa9a1;letter-spacing:2px;margin:4px 0 28px}.group{font-size:11px;letter-spacing:2px;color:#a0ada6;margin:22px 2px 8px}.nav{display:block;width:100%;text-align:left;background:transparent;color:#66766e;margin:3px 0;padding:12px 14px;font-weight:600}.nav.active,.nav:hover{background:var(--green2);color:var(--green)}
+main{margin-left:245px;padding:30px;max-width:1600px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}.eyebrow{font-size:11px;letter-spacing:2px;color:var(--green);font-weight:800}.title{font-size:32px;margin:5px 0}.sub{color:var(--muted);margin:0}.hero{background:linear-gradient(110deg,#24675b,#438f7e);color:white;border-radius:22px;padding:34px;display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:20px}.hero h2{font-size:30px;margin:8px 0}.hero button{background:white;color:var(--green);font-size:16px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0 28px}.stat,.card,.panel{background:white;border:1px solid var(--line);border-radius:16px;padding:20px}.stat small{color:var(--muted)}.num{font-size:30px;font-weight:800;margin:5px 0}.sectionhead{display:flex;justify-content:space-between;align-items:center;margin:24px 0 14px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.tripcover{height:115px;border-radius:12px;background:linear-gradient(120deg,#c4e0d7,#f0d9bf);display:grid;place-items:center;font-size:40px;margin-bottom:14px}.muted{color:var(--muted)}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.toolbar{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0}.toolbar input{max-width:330px}.field{display:flex;flex-direction:column;gap:6px;margin:10px 0}.field label{font-size:13px;font-weight:700;color:#52645b}.field input,.field select,.field textarea,.toolbar input,.toolbar select{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px;background:white;color:var(--ink)}.field textarea{min-height:75px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.empty{padding:32px;text-align:center;color:var(--muted);background:white;border:1px dashed #ccd9d2;border-radius:14px}.item{background:white;border:1px solid var(--line);border-radius:13px;padding:16px;margin:10px 0}.item h3{margin:0 0 6px}.item p{margin:4px 0;color:var(--muted)}.pill{display:inline-block;background:var(--green2);color:var(--green);padding:4px 9px;border-radius:20px;font-size:12px}.tablewrap{overflow:auto;background:white;border:1px solid var(--line);border-radius:14px}table{width:100%;border-collapse:collapse;min-width:650px}th,td{text-align:left;padding:13px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:12px;background:#fafcfb}td{font-size:14px}.hidden{display:none!important}.footer{font-size:12px;color:#8a9991;margin-top:30px}.modalback{position:fixed;inset:0;background:#10251f66;display:grid;place-items:center;padding:18px;z-index:5}.modal{background:white;border-radius:18px;padding:22px;width:min(600px,100%);max-height:90vh;overflow:auto}.modalhead{display:flex;justify-content:space-between;align-items:center}.modalhead h2{margin:0}.close{background:#f1f4f2;color:#53645b}.notice{background:#fff8e8;border:1px solid #f0dfb8;color:#725d2d;padding:12px;border-radius:10px;font-size:13px;margin-top:14px}
+@media(max-width:900px){.sidebar{position:static;width:100%;height:auto;display:flex;align-items:center;gap:5px;padding:12px;overflow-x:auto}.brand,.tag,.group{display:none}.nav{white-space:nowrap;width:auto;margin:0;padding:10px}.sidebar .nav:first-of-type{margin-left:0}main{margin:0;padding:18px}.stats{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.hero{padding:24px;align-items:flex-start;flex-direction:column}}
+@media(max-width:520px){.formgrid{grid-template-columns:1fr}.title{font-size:27px}.stats{gap:8px}.stat{padding:13px}.num{font-size:24px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+<div class="brand">MY TRIP</div><div class="tag">PLAN · EXPLORE · REMEMBER</div>
+<div class="group">WORKSPACE</div>
+<button class="nav active" data-page="dashboard">⌂　Dashboard</button>
+<button class="nav" data-page="trips">✈　My Trips</button>
+<button class="nav" data-page="itinerary">▦　Itinerary</button>
+<button class="nav" data-page="places">⌖　Places</button>
+<button class="nav" data-page="restaurants">☕　Restaurants & Cafés</button>
+<button class="nav" data-page="maps">🗺　Map & Routes</button>
+<button class="nav" data-page="transport">⇄　Transportation</button>
+<button class="nav" data-page="stay">⌂　Accommodation</button>
+<div class="group">FINANCE</div>
+<button class="nav" data-page="expenses">฿　Expenses & Budget</button>
+<button class="nav" data-page="reports">▥　Reports</button>
+<div class="group">COLLABORATION</div>
+<button class="nav" data-page="group">♧　Group & Split</button>
+</aside>
+<main>
+<header class="top"><div><div class="eyebrow">YOUR PERSONAL TRAVEL SPACE</div><h1 class="title" id="pageTitle">Good morning, Traveler ✨</h1><p class="sub">วางแผนทุกการเดินทาง เก็บทุกความทรงจำไว้ในที่เดียว</p></div><div class="pill">MY TRIP V4</div></header>
+<section id="dashboard" class="page">
+<div class="hero"><div><small>YOUR NEXT ADVENTURE</small><h2>Where will you go next?</h2><b>ทุกทริปของคุณ เริ่มต้นได้ที่นี่</b></div><button onclick="openModal('trip')">＋ Create a Trip</button></div>
+<div class="stats">
+<div class="stat"><small>MY TRIPS</small><div class="num" id="statTrips">0</div><small>ทริปทั้งหมด</small></div>
+<div class="stat"><small>PLACES SAVED</small><div class="num" id="statPlaces">0</div><small>สถานที่ที่บันทึกไว้</small></div>
+<div class="stat"><small>RESTAURANTS</small><div class="num" id="statRestaurants">0</div><small>ร้านอาหารและคาเฟ่</small></div>
+<div class="stat"><small>TRAVEL SPENT</small><div class="num" id="statSpent">฿0</div><small>ค่าใช้จ่ายที่บันทึก</small></div>
+</div>
+<div class="sectionhead"><h2>My Trips</h2><button class="primary" onclick="showPage('trips')">Manage trips →</button></div><div id="dashboardTrips" class="grid"></div>
+</section>
+<section id="trips" class="page hidden"><div class="sectionhead"><div><h2>My Trips</h2><p class="muted">เพิ่ม แก้ไข และลบทริปของคุณ</p></div><button class="primary" onclick="openModal('trip')">＋ Create a Trip</button></div><div id="tripList"></div></section>
+<section id="itinerary" class="page hidden"><div class="sectionhead"><div><h2>Itinerary</h2><p class="muted">จัดตารางเที่ยวรายวัน พร้อมเวลาและรายละเอียด</p></div><button class="primary" onclick="openModal('activity')">＋ Add Activity</button></div><div id="itineraryList"></div></section>
+<section id="places" class="page hidden"><div class="sectionhead"><div><h2>Places</h2><p class="muted">บันทึกสถานที่ท่องเที่ยวและจุดหมายที่อยากไป</p></div><button class="primary" onclick="openModal('place')">＋ Add Place</button></div><div id="placeList"></div></section>
+<section id="restaurants" class="page hidden"><div class="sectionhead"><div><h2>Restaurants & Cafés</h2><p class="muted">รวมร้านอาหาร คาเฟ่ และร้านที่อยากลอง</p></div><button class="primary" onclick="openModal('restaurant')">＋ Add Restaurant</button></div><div id="restaurantList"></div></section>
+<section id="maps" class="page hidden"><div class="sectionhead"><div><h2>Map & Routes</h2></div></div><div class="panel"><p>เปิดดูตำแหน่งจากสถานที่ที่บันทึกไว้ใน Google Maps ได้โดยกดปุ่มแผนที่ของแต่ละรายการ</p><div id="mapLinks"></div><div class="notice">เวอร์ชันนี้ยังไม่ได้เชื่อมต่อ Google Maps API แต่สามารถเปิดค้นหาสถานที่ผ่าน Google Maps ได้</div></div></section>
+<section id="transport" class="page hidden"><div class="sectionhead"><div><h2>Transportation</h2><p class="muted">บันทึกเที่ยวบิน รถไฟ รถเช่า และการเดินทาง</p></div><button class="primary" onclick="openModal('transport')">＋ Add Transport</button></div><div id="transportList"></div></section>
+<section id="stay" class="page hidden"><div class="sectionhead"><div><h2>Accommodation</h2><p class="muted">จัดการโรงแรม ที่พัก และข้อมูลการจอง</p></div><button class="primary" onclick="openModal('stay')">＋ Add Accommodation</button></div><div id="stayList"></div></section>
+<section id="expenses" class="page hidden"><div class="sectionhead"><div><h2>Expenses & Budget</h2><p class="muted">บันทึกรายจ่ายและติดตามงบประมาณของทริป</p></div><button class="primary" onclick="openModal('expense')">＋ Add Expense</button></div><div id="expenseSummary" class="stats"></div><div id="expenseList"></div></section>
+<section id="reports" class="page hidden"><div class="sectionhead"><h2>Reports</h2></div><div class="panel" id="reportContent"></div></section>
+<section id="group" class="page hidden"><div class="sectionhead"><h2>Group & Split</h2></div><div class="panel"><p>ฟีเจอร์บันทึกสมาชิกและคำนวณหารค่าใช้จ่ายร่วมกันจะพัฒนาในเวอร์ชันถัดไป</p><p class="muted">ตอนนี้สามารถบันทึกค่าใช้จ่ายรวมไว้ใน Expenses & Budget ได้ก่อน</p></div></section>
+<div class="footer">MY TRIP V4 · ข้อมูลบันทึกไว้ในเบราว์เซอร์เครื่องนี้ (localStorage) · ควร Export สำรองข้อมูลเป็นระยะ</div>
+</main></div>
+<div id="modalRoot"></div>
+<script>
+const keys=['trips','activities','places','restaurants','transports','stays','expenses'];
+let db={}; keys.forEach(k=>db[k]=JSON.parse(localStorage.getItem('mytrip_'+k)||'[]'));
+let currentPage='dashboard';
+function save(){keys.forEach(k=>localStorage.setItem('mytrip_'+k,JSON.stringify(db[k])));render()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function showPage(p){currentPage=p;document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));document.getElementById(p).classList.remove('hidden');document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x.dataset.page===p));let names={dashboard:'Good morning, Traveler ✨',trips:'My Trips',itinerary:'Itinerary',places:'Places',restaurants:'Restaurants & Cafés',maps:'Map & Routes',transport:'Transportation',stay:'Accommodation',expenses:'Expenses & Budget',reports:'Reports',group:'Group & Split'};document.getElementById('pageTitle').textContent=names[p];render()}
+document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
+function tripOptions(){return db.trips.map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('')}
+function openModal(type,id=null){
+let existing=id?db[type==='activity'?'activities':type==='place'?'places':type==='restaurant'?'restaurants':type==='transport'?'transports':type==='stay'?'stays':type==='expense'?'expenses':'trips'].find(x=>x.id===id):null;
+let fields='',title='',bucket=type==='activity'?'activities':type==='place'?'places':type==='restaurant'?'restaurants':type==='transport'?'transports':type==='stay'?'stays':type==='expense'?'expenses':'trips';
+const f=(label,name,kind='text',value='')=>`<div class="field"><label>${label}</label><input name="${name}" type="${kind}" value="${esc(value)}"></div>`;
+const selectTrip=`<div class="field"><label>Trip</label><select name="tripId">${tripOptions()}</select></div>`;
+if(type==='trip'){title='Create a Trip';fields=f('Trip name','name','text',existing?.name)+f('Destination','destination','text',existing?.destination)+`<div class="formgrid">${f('Start date','start','date',existing?.start)}${f('End date','end','date',existing?.end)}</div>`+f('Budget (THB)','budget','number',existing?.budget||'')+f('Notes','notes','text',existing?.notes||'')}
+if(type==='activity'){title='Add Activity';fields=selectTrip+`<div class="formgrid">${f('Date','date','date')}${f('Time','time','time')}</div>`+f('Activity / Place','name')+f('Notes','notes')}
+if(type==='place'||type==='restaurant'){title=type==='place'?'Add Place':'Add Restaurant';fields=selectTrip+f('Name','name')+f('Address / Area','address')+f('Google Maps URL (optional)','url','url')+f('Estimated cost (THB)','cost','number')+f('Notes','notes')}
+if(type==='transport'){title='Add Transportation';fields=selectTrip+f('Type (Flight / Train / Bus / Car)','kind')+f('Route / Details','name')+f('Date & time','date','datetime-local')+f('Booking reference','ref')}
+if(type==='stay'){title='Add Accommodation';fields=selectTrip+f('Hotel / Accommodation','name')+f('Address','address')+`<div class="formgrid">${f('Check-in','start','date')}${f('Check-out','end','date')}</div>`+f('Booking reference','ref')+f('Cost (THB)','cost','number')}
+if(type==='expense'){title='Add Expense';fields=selectTrip+f('Expense description','name')+`<div class="formgrid">${f('Amount (THB)','amount','number')}${f('Date','date','date')}</div>`+`<div class="field"><label>Category</label><select name="category"><option>Food</option><option>Transport</option><option>Accommodation</option><option>Attraction</option><option>Shopping</option><option>Other</option></select></div>`+f('Notes','notes')}
+document.getElementById('modalRoot').innerHTML=`<div class="modalback" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modalhead"><h2>${title}</h2><button class="close" onclick="closeModal()">✕</button></div><form id="entryForm">${fields}<div class="row" style="justify-content:flex-end;margin-top:18px"><button type="button" onclick="closeModal()">Cancel</button><button class="primary" type="submit">Save</button></div></form></div></div>`;
+document.getElementById('entryForm').onsubmit=e=>{e.preventDefault();let data=Object.fromEntries(new FormData(e.target).entries());data.id=existing?.id||Date.now().toString();if(type==='trip')data.budget=Number(data.budget||0);if(type==='expense'||type==='stay'||type==='place'||type==='restaurant')data.amount=Number(data.amount||data.cost||0);db[bucket]=db[bucket].filter(x=>x.id!==data.id).concat(data);closeModal();save()};
+}
+function closeModal(){document.getElementById('modalRoot').innerHTML=''}
+function del(bucket,id){if(confirm('ลบรายการนี้ใช่ไหม?')){db[bucket]=db[bucket].filter(x=>x.id!==id);save()}}
+function tripName(id){return db.trips.find(t=>t.id===id)?.name||'ไม่ระบุทริป'}
+function card(item,bucket,extra=''){return `<div class="item"><div class="row" style="justify-content:space-between"><div><h3>${esc(item.name||item.kind||'รายการ')}</h3><p>${esc(extra||item.destination||item.address||item.date||'')}</p></div><div class="row"><button class="small danger" onclick="del('${bucket}','${item.id}')">Delete</button></div></div>${item.tripId?`<span class="pill">${esc(tripName(item.tripId))}</span>`:''}${item.notes?`<p>${esc(item.notes)}</p>`:''}${item.url?`<p><a target="_blank" href="${esc(item.url)}">เปิดลิงก์</a></p>`:''}</div>`}
+function listOrEmpty(arr,bucket,extraFn){return arr.length?arr.map(x=>card(x,bucket,extraFn?extraFn(x):'')).join(''):'<div class="empty">ยังไม่มีข้อมูล กดปุ่มด้านบนเพื่อเพิ่มรายการแรกของคุณ</div>'}
+function render(){
+document.getElementById('statTrips').textContent=db.trips.length;document.getElementById('statPlaces').textContent=db.places.length;document.getElementById('statRestaurants').textContent=db.restaurants.length;let spent=db.expenses.reduce((a,x)=>a+Number(x.amount||0),0);document.getElementById('statSpent').textContent='฿'+spent.toLocaleString('th-TH');
+document.getElementById('dashboardTrips').innerHTML=db.trips.length?db.trips.slice(0,4).map(t=>`<div class="card"><div class="tripcover">✈️</div><h2>${esc(t.name)}</h2><p class="muted">${esc(t.destination)} · ${esc(t.start||'')} – ${esc(t.end||'')}</p><p class="muted">งบประมาณ ฿${Number(t.budget||0).toLocaleString('th-TH')}</p><button onclick="showPage('itinerary')">Open trip →</button></div>`).join(''):'<div class="empty">ยังไม่มีทริปของคุณ กด Create a Trip เพื่อเริ่มต้น</div>';
+document.getElementById('tripList').innerHTML=listOrEmpty(db.trips,'trips',t=>`${t.destination||''} · ${t.start||''} – ${t.end||''} · งบ ฿${Number(t.budget||0).toLocaleString('th-TH')}`);
+document.getElementById('itineraryList').innerHTML=listOrEmpty(db.activities,'activities',a=>`${a.date||''} ${a.time||''}`);
+document.getElementById('placeList').innerHTML=listOrEmpty(db.places,'places');
+document.getElementById('restaurantList').innerHTML=listOrEmpty(db.restaurants,'restaurants');
+document.getElementById('transportList').innerHTML=listOrEmpty(db.transports,'transports',x=>`${x.kind||''} · ${x.date||''} · ${x.ref||''}`);
+document.getElementById('stayList').innerHTML=listOrEmpty(db.stays,'stays',x=>`${x.address||''} · ${x.start||''} – ${x.end||''}`);
+document.getElementById('expenseList').innerHTML=listOrEmpty(db.expenses,'expenses',x=>`${x.category||''} · ${x.date||''} · ฿${Number(x.amount||0).toLocaleString('th-TH')}`);
+document.getElementById('expenseSummary').innerHTML=`<div class="stat"><small>TOTAL SPENT</small><div class="num">฿${spent.toLocaleString('th-TH')}</div></div><div class="stat"><small>EXPENSE ITEMS</small><div class="num">${db.expenses.length}</div></div><div class="stat"><small>TRIPS</small><div class="num">${db.trips.length}</div></div><div class="stat"><small>PLACES & RESTAURANTS</small><div class="num">${db.places.length+db.restaurants.length}</div></div>`;
+document.getElementById('mapLinks').innerHTML=[...db.places,...db.restaurants].length?[...db.places,...db.restaurants].map(x=>`<div class="item"><b>${esc(x.name)}</b><p>${esc(x.address||'')}</p><a target="_blank" href="${esc(x.url||('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(x.name+' '+(x.address||''))))}">เปิดใน Google Maps ↗</a></div>`).join(''):'<div class="empty">เพิ่มสถานที่หรือร้านอาหารก่อน แล้วลิงก์แผนที่จะปรากฏที่นี่</div>';
+document.getElementById('reportContent').innerHTML=`<h3>Travel Overview</h3><p>จำนวนทริป: <b>${db.trips.length}</b></p><p>สถานที่: <b>${db.places.length}</b></p><p>ร้านอาหาร: <b>${db.restaurants.length}</b></p><p>ค่าใช้จ่ายรวม: <b>฿${spent.toLocaleString('th-TH')}</b></p><button onclick="exportData()">Export Backup (JSON)</button> <button onclick="document.getElementById('importFile').click()">Import Backup</button><input id="importFile" type="file" accept=".json" class="hidden" onchange="importData(event)">`;
+}
+function exportData(){let blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='my-trip-backup.json';a.click();URL.revokeObjectURL(a.href)}
+function importData(e){let file=e.target.files[0];if(!file)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);keys.forEach(k=>db[k]=Array.isArray(d[k])?d[k]:[]);save();alert('นำเข้าข้อมูลเรียบร้อย')}catch{alert('ไฟล์ไม่ถูกต้อง')}};r.readAsText(file)}
+render();
+</script>
+</body>
+</html>
