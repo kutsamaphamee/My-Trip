@@ -130,7 +130,7 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
     showAuthMessage('เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบอีเมลและรหัสผ่าน (' + error.message + ')');
     return;
   }
-  showSignedIn(data.user);
+  try { await loadCloudData(data.user); showSignedIn(data.user); } catch (_) {}
 });
 (async function initAuth() {
   showSignedOut();
