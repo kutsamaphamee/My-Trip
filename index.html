@@ -298,11 +298,17 @@ document.getElementById('resetPasswordForm').addEventListener('submit', async (e
     showAuthMessage('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว สามารถเข้าสู่ระบบด้วยรหัสผ่านใหม่ได้', 'success');
   }
 });
+let recoveryMode = /type=recovery/i.test(window.location.hash + window.location.search);
+function showPasswordRecovery() {
+  recoveryMode = true;
+  showSignedOut();
+  document.getElementById('resetPasswordForm').classList.remove('hidden');
+  document.getElementById('loginForm').classList.add('hidden');
+  document.getElementById('forgotPasswordButton').classList.add('hidden');
+  showAuthMessage('กรุณาตั้งรหัสผ่านใหม่อย่างน้อย 8 ตัวอักษร', 'success');
+}
 supabaseClient.auth.onAuthStateChange((event) => {
-  if (event === 'PASSWORD_RECOVERY') {
-    document.getElementById('resetPasswordForm').classList.remove('hidden');
-    showAuthMessage('กรุณาตั้งรหัสผ่านใหม่อย่างน้อย 8 ตัวอักษร', 'success');
-  }
+  if (event === 'PASSWORD_RECOVERY') showPasswordRecovery();
 });
 document.getElementById('loginForm').addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -323,6 +329,7 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
 });
 (async function initAuth() {
   showSignedOut();
+  if (recoveryMode) { showPasswordRecovery(); return; }
   const { data, error } = await supabaseClient.auth.getSession();
   if (error) {
     showAuthMessage('ไม่สามารถตรวจสอบสถานะบัญชีได้: ' + error.message);
