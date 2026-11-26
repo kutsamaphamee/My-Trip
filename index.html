@@ -168,7 +168,9 @@ async function deleteRecord(bucket,id){
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function showPage(p){currentPage=p;document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));document.getElementById(p).classList.remove('hidden');document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x.dataset.page===p));let names={dashboard:'Good morning, Traveler ✨',trips:'My Trips',itinerary:'Itinerary',places:'Places',restaurants:'Restaurants & Cafés',maps:'Map & Routes',transport:'Transportation',stay:'Accommodation',expenses:'Expenses & Budget',reports:'Reports',group:'Group & Split'};document.getElementById('pageTitle').textContent=names[p];render()}
 document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
-function isSharedTrip(tripId){const trip=db.trips.find(t=>t.id===tripId);return !!trip&&trip.ownerId!==cloudUser}\nfunction isReadOnlyRecord(item){return !!item.tripId&&isSharedTrip(item.tripId)}\nfunction tripOptions(){return db.trips.filter(t=>t.ownerId===cloudUser).map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('')}
+function isSharedTrip(tripId){const trip=db.trips.find(t=>t.id===tripId);return !!trip&&trip.ownerId!==cloudUser}
+function isReadOnlyRecord(item){return !!item.tripId&&isSharedTrip(item.tripId)}
+function tripOptions(){return db.trips.filter(t=>t.ownerId===cloudUser).map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('')}
 function openModal(type,id=null){
 let bucket=type==='activity'?'activities':type==='place'?'places':type==='restaurant'?'restaurants':type==='transport'?'transports':type==='stay'?'stays':type==='expense'?'expenses':'trips';
 let existing=id?db[bucket].find(x=>x.id===id):null,fields='',title='';
