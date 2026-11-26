@@ -164,7 +164,7 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
     showAuthMessage('เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบอีเมลและรหัสผ่าน (' + error.message + ')');
     return;
   }
-  try { await loadCloudData(data.user); showSignedIn(data.user); } catch (_) {}
+  try { await loadCloudData(data.user); showSignedIn(data.user); } catch (err) { showAuthMessage('เข้าสู่ระบบแล้ว แต่โหลดข้อมูลไม่สำเร็จ: ' + err.message); }
 });
 (async function initAuth() {
   showSignedOut();
@@ -173,12 +173,11 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
     showAuthMessage('ไม่สามารถตรวจสอบสถานะบัญชีได้: ' + error.message);
     return;
   }
-  if (data.session?.user) { try { await loadCloudData(data.session.user); showSignedIn(data.session.user); } catch (_) {} }
+  if (data.session?.user) { try { await loadCloudData(data.session.user); showSignedIn(data.session.user); } catch (err) { showAuthMessage('เข้าสู่ระบบแล้ว แต่โหลดข้อมูลไม่สำเร็จ: ' + err.message); } }
 })();
-supabaseClient.auth.onAuthStateChange((_event, session) => {
-  if (session?.user) { loadCloudData(session.user).then(()=>showSignedIn(session.user)).catch(()=>{}); }
-  else showSignedOut();
-});
+// Session is restored by initAuth() and login/signup handlers.
+ // Avoid starting database requests inside Supabase's auth-state callback,
+ // which can contend with the auth lock during sign-in/token refresh.
 </script>
 
 <script>
