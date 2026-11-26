@@ -31,8 +31,9 @@ main{margin-left:245px;padding:30px;max-width:1600px}.top{display:flex;justify-c
       <div class="field"><label for="loginPassword">รหัสผ่าน</label><input id="loginPassword" type="password" autocomplete="current-password" required minlength="8" placeholder="รหัสผ่าน"></div>
       <button class="primary" id="loginButton" type="submit">เข้าสู่ระบบ</button>
     </form>
+    <button id="signupButton" type="button">เพื่อนยังไม่มีบัญชี? สมัครสมาชิก</button>
     <div id="authMessage" aria-live="polite"></div>
-    <p style="font-size:12px;margin-top:18px">บัญชี MY TRIP เป็นบัญชีส่วนตัวที่ผู้ดูแลสร้างให้เท่านั้น</p>
+    <p style="font-size:12px;margin-top:18px">สมัครด้วยอีเมลของตนเองเพื่อรับสิทธิ์ดูทริปที่เจ้าของแชร์ให้เท่านั้น</p>
   </div>
 </section>
 
@@ -115,6 +116,39 @@ function showSignedOut() {
   appRoot.classList.add('hidden');
   authScreen.classList.remove('hidden');
 }
+document.getElementById('signupButton').addEventListener('click', async () => {
+  const button = document.getElementById('signupButton');
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) {
+    showAuthMessage('กรุณากรอกอีเมลและตั้งรหัสผ่านอย่างน้อย 8 ตัวอักษรก่อนสมัครสมาชิก');
+    return;
+  }
+  if (password.length < 8) {
+    showAuthMessage('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+    return;
+  }
+  button.disabled = true;
+  button.textContent = 'กำลังสมัครสมาชิก...';
+  authMessage.textContent = '';
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: window.location.origin }
+  });
+  button.disabled = false;
+  button.textContent = 'เพื่อนยังไม่มีบัญชี? สมัครสมาชิก';
+  if (error) {
+    showAuthMessage('สมัครสมาชิกไม่สำเร็จ: ' + error.message);
+    return;
+  }
+  if (data.session?.user) {
+    try { await loadCloudData(data.session.user); showSignedIn(data.session.user); }
+    catch (err) { showAuthMessage('สร้างบัญชีแล้ว แต่โหลดข้อมูลไม่สำเร็จ: ' + err.message); }
+  } else {
+    showAuthMessage('ส่งอีเมลยืนยันการสมัครแล้ว กรุณาให้เพื่อนเปิดอีเมลและกดยืนยันก่อนเข้าสู่ระบบ', 'success');
+  }
+});
 document.getElementById('loginForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   const button = document.getElementById('loginButton');
