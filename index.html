@@ -82,103 +82,7 @@ main{margin-left:245px;padding:30px;max-width:1600px}.top{display:flex;justify-c
 <div id="modalRoot"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-const SUPABASE_URL = 'https://kqjemnnxlfuelboflwpa.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_yiJe9b2zPwkhuoiW84VrPg_EWc4Ozn0';
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const authScreen = document.getElementById('authScreen');
-const appRoot = document.querySelector('.app');
-const authMessage = document.getElementById('authMessage');
-function showAuthMessage(message, type='error') {
-  authMessage.className = type === 'success' ? 'auth-success' : 'auth-error';
-  authMessage.textContent = message;
-}
-function showSignedIn(user) {
-  authScreen.classList.add('hidden');
-  appRoot.classList.remove('hidden');
-  const top = document.querySelector('.top');
-  let tools = document.getElementById('accountTools');
-  if (!tools) {
-    tools = document.createElement('div');
-    tools.id = 'accountTools';
-    tools.className = 'account-tools';
-    top.appendChild(tools);
-  }
-  tools.innerHTML = '<span class="account-email"></span><button class="small" id="logoutButton" type="button">ออกจากระบบ</button>';
-  tools.querySelector('.account-email').textContent = user.email || '';
-  document.getElementById('logoutButton').onclick = async () => {
-    const { error } = await supabaseClient.auth.signOut();
-    if (error) alert('ออกจากระบบไม่สำเร็จ: ' + error.message);
-    else location.reload();
-  };
-}
-function showSignedOut() {
-  appRoot.classList.add('hidden');
-  authScreen.classList.remove('hidden');
-}
-document.getElementById('signupButton').addEventListener('click', async () => {
-  const button = document.getElementById('signupButton');
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-  if (!email || !password) {
-    showAuthMessage('กรุณากรอกอีเมลและตั้งรหัสผ่านอย่างน้อย 8 ตัวอักษรก่อนสมัครสมาชิก');
-    return;
-  }
-  if (password.length < 8) {
-    showAuthMessage('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
-    return;
-  }
-  button.disabled = true;
-  button.textContent = 'กำลังสมัครสมาชิก...';
-  authMessage.textContent = '';
-  const { data, error } = await supabaseClient.auth.signUp({
-    email,
-    password,
-    options: { emailRedirectTo: window.location.origin }
-  });
-  button.disabled = false;
-  button.textContent = 'เพื่อนยังไม่มีบัญชี? สมัครสมาชิก';
-  if (error) {
-    showAuthMessage('สมัครสมาชิกไม่สำเร็จ: ' + error.message);
-    return;
-  }
-  if (data.session?.user) {
-    try { await loadCloudData(data.session.user); showSignedIn(data.session.user); }
-    catch (err) { showAuthMessage('สร้างบัญชีแล้ว แต่โหลดข้อมูลไม่สำเร็จ: ' + err.message); }
-  } else {
-    showAuthMessage('ส่งอีเมลยืนยันการสมัครแล้ว กรุณาให้เพื่อนเปิดอีเมลและกดยืนยันก่อนเข้าสู่ระบบ', 'success');
-  }
-});
-document.getElementById('loginForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const button = document.getElementById('loginButton');
-  button.disabled = true;
-  button.textContent = 'กำลังเข้าสู่ระบบ...';
-  authMessage.textContent = '';
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  button.disabled = false;
-  button.textContent = 'เข้าสู่ระบบ';
-  if (error) {
-    showAuthMessage('เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบอีเมลและรหัสผ่าน (' + error.message + ')');
-    return;
-  }
-  try { await loadCloudData(data.user); showSignedIn(data.user); } catch (err) { showAuthMessage('เข้าสู่ระบบแล้ว แต่โหลดข้อมูลไม่สำเร็จ: ' + err.message); }
-});
-(async function initAuth() {
-  showSignedOut();
-  const { data, error } = await supabaseClient.auth.getSession();
-  if (error) {
-    showAuthMessage('ไม่สามารถตรวจสอบสถานะบัญชีได้: ' + error.message);
-    return;
-  }
-  if (data.session?.user) { try { await loadCloudData(data.session.user); showSignedIn(data.session.user); } catch (err) { showAuthMessage('เข้าสู่ระบบแล้ว แต่โหลดข้อมูลไม่สำเร็จ: ' + err.message); } }
-})();
-// Session is restored by initAuth() and login/signup handlers.
- // Avoid starting database requests inside Supabase's auth-state callback,
- // which can contend with the auth lock during sign-in/token refresh.
-</script>
+
 
 <script>
 const keys=['trips','activities','places','restaurants','transports','stays','expenses'];
@@ -322,6 +226,104 @@ document.getElementById('reportContent').innerHTML=`<h3>Travel Overview</h3><p>�
 function exportData(){let blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='my-trip-backup.json';a.click();URL.revokeObjectURL(a.href)}
 function importData(e){let file=e.target.files[0];if(!file)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);keys.forEach(k=>db[k]=Array.isArray(d[k])?d[k]:[]);persistLocal();alert('ไฟล์ถูกนำเข้าในเครื่องนี้แล้ว โปรดตรวจสอบข้อมูลก่อนใช้งาน')}catch{alert('ไฟล์ไม่ถูกต้อง')}};r.readAsText(file)}
 render();
+</script>
+
+<script>
+const SUPABASE_URL = 'https://kqjemnnxlfuelboflwpa.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_yiJe9b2zPwkhuoiW84VrPg_EWc4Ozn0';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const authScreen = document.getElementById('authScreen');
+const appRoot = document.querySelector('.app');
+const authMessage = document.getElementById('authMessage');
+function showAuthMessage(message, type='error') {
+  authMessage.className = type === 'success' ? 'auth-success' : 'auth-error';
+  authMessage.textContent = message;
+}
+function showSignedIn(user) {
+  authScreen.classList.add('hidden');
+  appRoot.classList.remove('hidden');
+  const top = document.querySelector('.top');
+  let tools = document.getElementById('accountTools');
+  if (!tools) {
+    tools = document.createElement('div');
+    tools.id = 'accountTools';
+    tools.className = 'account-tools';
+    top.appendChild(tools);
+  }
+  tools.innerHTML = '<span class="account-email"></span><button class="small" id="logoutButton" type="button">ออกจากระบบ</button>';
+  tools.querySelector('.account-email').textContent = user.email || '';
+  document.getElementById('logoutButton').onclick = async () => {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) alert('ออกจากระบบไม่สำเร็จ: ' + error.message);
+    else location.reload();
+  };
+}
+function showSignedOut() {
+  appRoot.classList.add('hidden');
+  authScreen.classList.remove('hidden');
+}
+document.getElementById('signupButton').addEventListener('click', async () => {
+  const button = document.getElementById('signupButton');
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) {
+    showAuthMessage('กรุณากรอกอีเมลและตั้งรหัสผ่านอย่างน้อย 8 ตัวอักษรก่อนสมัครสมาชิก');
+    return;
+  }
+  if (password.length < 8) {
+    showAuthMessage('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+    return;
+  }
+  button.disabled = true;
+  button.textContent = 'กำลังสมัครสมาชิก...';
+  authMessage.textContent = '';
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: window.location.origin }
+  });
+  button.disabled = false;
+  button.textContent = 'เพื่อนยังไม่มีบัญชี? สมัครสมาชิก';
+  if (error) {
+    showAuthMessage('สมัครสมาชิกไม่สำเร็จ: ' + error.message);
+    return;
+  }
+  if (data.session?.user) {
+    try { await loadCloudData(data.session.user); showSignedIn(data.session.user); }
+    catch (err) { showAuthMessage('สร้างบัญชีแล้ว แต่โหลดข้อมูลไม่สำเร็จ: ' + err.message); }
+  } else {
+    showAuthMessage('ส่งอีเมลยืนยันการสมัครแล้ว กรุณาให้เพื่อนเปิดอีเมลและกดยืนยันก่อนเข้าสู่ระบบ', 'success');
+  }
+});
+document.getElementById('loginForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = document.getElementById('loginButton');
+  button.disabled = true;
+  button.textContent = 'กำลังเข้าสู่ระบบ...';
+  authMessage.textContent = '';
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  button.disabled = false;
+  button.textContent = 'เข้าสู่ระบบ';
+  if (error) {
+    showAuthMessage('เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบอีเมลและรหัสผ่าน (' + error.message + ')');
+    return;
+  }
+  try { await loadCloudData(data.user); showSignedIn(data.user); } catch (err) { showAuthMessage('เข้าสู่ระบบแล้ว แต่โหลดข้อมูลไม่สำเร็จ: ' + err.message); }
+});
+(async function initAuth() {
+  showSignedOut();
+  const { data, error } = await supabaseClient.auth.getSession();
+  if (error) {
+    showAuthMessage('ไม่สามารถตรวจสอบสถานะบัญชีได้: ' + error.message);
+    return;
+  }
+  if (data.session?.user) { try { await loadCloudData(data.session.user); showSignedIn(data.session.user); } catch (err) { showAuthMessage('เข้าสู่ระบบแล้ว แต่โหลดข้อมูลไม่สำเร็จ: ' + err.message); } }
+})();
+// Session is restored by initAuth() and login/signup handlers.
+ // Avoid starting database requests inside Supabase's auth-state callback,
+ // which can contend with the auth lock during sign-in/token refresh.
 </script>
 </body>
 </html>
