@@ -162,7 +162,7 @@ const tableMap={
   expenses:{table:'expenses',to:r=>({id:r.id,tripId:r.trip_id,name:r.expense_name,amount:r.amount,date:r.expense_date,category:r.category,notes:r.notes}),from:(x,u)=>({user_id:u,trip_id:x.tripId||null,expense_name:x.name,amount:Number(x.amount||0),expense_date:x.date||null,category:x.category||null,notes:x.notes||null})}
 };
 function persistLocal(){keys.forEach(k=>localStorage.setItem('mytrip_'+k,JSON.stringify(db[k])))}
-async function cloudRequest(p){if(p.error)throw p.error;return p.data}
+async function cloudRequest(request){const {data,error}=await request;if(error)throw error;if(data===undefined)throw new Error('ไม่ได้รับข้อมูลตอบกลับจาก Supabase');return data}
 async function loadCloudData(user){
   if(!user)return;
   if(cloudUser===user.id&&cloudReady)return;
