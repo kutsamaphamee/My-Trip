@@ -173,7 +173,7 @@ async function loadCloudData(user){
     for(const k of keys){
       const cfg=tableMap[k];
       const rows=await cloudRequest(supabaseClient.from(cfg.table).select('*').order('created_at',{ascending:true}));
-      remote[k]=rows.map(cfg.to);
+      remote[k]=(Array.isArray(rows)?rows:[]).map(cfg.to);
     }
     const remoteCount=keys.reduce((n,k)=>n+remote[k].length,0);
     const localCount=keys.reduce((n,k)=>n+db[k].length,0);
@@ -193,10 +193,10 @@ async function loadCloudData(user){
         }
       }
       const trips=await cloudRequest(supabaseClient.from('trips').select('*').order('created_at',{ascending:true}));
-      remote.trips=trips.map(tableMap.trips.to);
+      remote.trips=(Array.isArray(trips)?trips:[]).map(tableMap.trips.to);
       localStorage.setItem('mytrip_migration_v1','done');
     }
-    db=remote;
+    db=Object.fromEntries(keys.map(k=>[k,Array.isArray(remote[k])?remote[k]:[]]));
     persistLocal();
     cloudReady=true;
     render();
