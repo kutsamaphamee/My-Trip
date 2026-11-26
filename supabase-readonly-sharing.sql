@@ -12,6 +12,10 @@ create table if not exists public.trip_shares (
 );
 alter table public.trip_shares enable row level security;
 
+-- Table privileges are required in addition to RLS policies.
+-- RLS below limits owners to managing their own shares and viewers to SELECT only.
+grant select, insert, update, delete on table public.trip_shares to authenticated;
+
 -- SECURITY DEFINER helpers avoid recursive RLS policy evaluation.
 create or replace function public.is_my_trip_owner(p_trip_id uuid)
 returns boolean language sql stable security definer
