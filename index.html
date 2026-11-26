@@ -76,7 +76,7 @@ main{margin-left:245px;padding:30px;max-width:1600px}.top{display:flex;justify-c
 <section id="expenses" class="page hidden"><div class="sectionhead"><div><h2>Expenses & Budget</h2><p class="muted">บันทึกรายจ่ายและติดตามงบประมาณของทริป</p></div><button class="primary" onclick="openModal('expense')">＋ Add Expense</button></div><div id="expenseSummary" class="stats"></div><div id="expenseList"></div></section>
 <section id="reports" class="page hidden"><div class="sectionhead"><h2>Reports</h2></div><div class="panel" id="reportContent"></div></section>
 <section id="group" class="page hidden"><div class="sectionhead"><h2>Group & Split</h2></div><div class="panel"><p>ฟีเจอร์บันทึกสมาชิกและคำนวณหารค่าใช้จ่ายร่วมกันจะพัฒนาในเวอร์ชันถัดไป</p><p class="muted">ตอนนี้สามารถบันทึกค่าใช้จ่ายรวมไว้ใน Expenses & Budget ได้ก่อน</p></div></section>
-<div class="footer">MY TRIP V4 · ข้อมูลบันทึกไว้ในเบราว์เซอร์เครื่องนี้ (localStorage) · ควร Export สำรองข้อมูลเป็นระยะ</div>
+<div class="footer">MY TRIP V4 · ข้อมูลจัดเก็บออนไลน์ในบัญชีส่วนตัว · ควร Export สำรองข้อมูลเป็นระยะ</div>
 </main></div>
 <div id="modalRoot"></div>
 
@@ -139,10 +139,10 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
     showAuthMessage('ไม่สามารถตรวจสอบสถานะบัญชีได้: ' + error.message);
     return;
   }
-  if (data.session?.user) showSignedIn(data.session.user);
+  if (data.session?.user) { try { await loadCloudData(data.session.user); showSignedIn(data.session.user); } catch (_) {} }
 })();
 supabaseClient.auth.onAuthStateChange((_event, session) => {
-  if (session?.user) showSignedIn(session.user);
+  if (session?.user) { loadCloudData(session.user).then(()=>showSignedIn(session.user)).catch(()=>{}); }
   else showSignedOut();
 });
 </script>
@@ -151,46 +151,122 @@ supabaseClient.auth.onAuthStateChange((_event, session) => {
 const keys=['trips','activities','places','restaurants','transports','stays','expenses'];
 let db={}; keys.forEach(k=>db[k]=JSON.parse(localStorage.getItem('mytrip_'+k)||'[]'));
 let currentPage='dashboard';
-function save(){keys.forEach(k=>localStorage.setItem('mytrip_'+k,JSON.stringify(db[k])));render()}
+let cloudUser=null, cloudReady=false, cloudLoadPromise=null;
+const tableMap={
+  trips:{table:'trips',to:r=>({id:r.id,name:r.name,destination:r.destination,start:r.start_date,end:r.end_date,budget:r.budget, currency:r.currency,notes:r.notes}),from:(x,u)=>({user_id:u,name:x.name,destination:x.destination||null,start_date:x.start||null,end_date:x.end||null,budget:Number(x.budget||0),currency:x.currency||'THB',notes:x.notes||null})},
+  activities:{table:'itinerary',to:r=>({id:r.id,tripId:r.trip_id,name:r.activity_name,date:r.activity_date,time:r.start_time,location:r.location,notes:r.notes}),from:(x,u)=>({user_id:u,trip_id:x.tripId||null,activity_name:x.name,activity_date:x.date||null,start_time:x.time||null,location:x.location||null,notes:x.notes||null})},
+  places:{table:'places',to:r=>({id:r.id,tripId:r.trip_id,name:r.name,address:r.address,url:r.url,cost:r.estimated_cost,notes:r.notes}),from:(x,u)=>({user_id:u,trip_id:x.tripId||null,name:x.name,address:x.address||null,url:x.url||null,estimated_cost:Number(x.cost||x.amount||0),notes:x.notes||null})},
+  restaurants:{table:'restaurants',to:r=>({id:r.id,tripId:r.trip_id,name:r.name,address:r.address,url:r.url,cost:r.average_cost,notes:r.notes}),from:(x,u)=>({user_id:u,trip_id:x.tripId||null,name:x.name,address:x.address||null,url:x.url||null,average_cost:Number(x.cost||x.amount||0),currency:'THB',notes:x.notes||null})},
+  transports:{table:'transportation',to:r=>({id:r.id,tripId:r.trip_id,kind:r.kind,name:r.name,date:r.travel_datetime,ref:r.booking_reference}),from:(x,u)=>({user_id:u,trip_id:x.tripId||null,kind:x.kind||null,name:x.name,travel_datetime:x.date||null,booking_reference:x.ref||null})},
+  stays:{table:'accommodation',to:r=>({id:r.id,tripId:r.trip_id,name:r.name,address:r.address,start:r.check_in,end:r.check_out,ref:r.booking_reference,cost:r.cost}),from:(x,u)=>({user_id:u,trip_id:x.tripId||null,name:x.name,address:x.address||null,check_in:x.start||null,check_out:x.end||null,booking_reference:x.ref||null,cost:Number(x.cost||x.amount||0)})},
+  expenses:{table:'expenses',to:r=>({id:r.id,tripId:r.trip_id,name:r.expense_name,amount:r.amount,date:r.expense_date,category:r.category,notes:r.notes}),from:(x,u)=>({user_id:u,trip_id:x.tripId||null,expense_name:x.name,amount:Number(x.amount||0),expense_date:x.date||null,category:x.category||null,notes:x.notes||null})}
+};
+function persistLocal(){keys.forEach(k=>localStorage.setItem('mytrip_'+k,JSON.stringify(db[k])))}
+async function cloudRequest(p){if(p.error)throw p.error;return p.data}
+async function loadCloudData(user){
+  if(!user)return;
+  if(cloudUser===user.id&&cloudReady)return;
+  if(cloudLoadPromise)return cloudLoadPromise;
+  cloudLoadPromise=(async()=>{
+    cloudUser=user.id;
+    const remote={};
+    for(const k of keys){
+      const cfg=tableMap[k];
+      const rows=await cloudRequest(supabaseClient.from(cfg.table).select('*').order('created_at',{ascending:true}));
+      remote[k]=rows.map(cfg.to);
+    }
+    const remoteCount=keys.reduce((n,k)=>n+remote[k].length,0);
+    const localCount=keys.reduce((n,k)=>n+db[k].length,0);
+    if(remoteCount===0&&localCount>0){
+      const idMap={};
+      for(const oldTrip of db.trips){
+        const payload=tableMap.trips.from(oldTrip,user.id);
+        const row=await cloudRequest(supabaseClient.from('trips').insert(payload).select().single());
+        idMap[oldTrip.id]=row.id;
+      }
+      for(const k of keys.filter(x=>x!=='trips')){
+        for(const item of db[k]){
+          const mapped={...item,tripId:idMap[item.tripId]||null};
+          const payload=tableMap[k].from(mapped,user.id);
+          const row=await cloudRequest(supabaseClient.from(tableMap[k].table).insert(payload).select().single());
+          remote[k].push(tableMap[k].to(row));
+        }
+      }
+      const trips=await cloudRequest(supabaseClient.from('trips').select('*').order('created_at',{ascending:true}));
+      remote.trips=trips.map(tableMap.trips.to);
+      localStorage.setItem('mytrip_migration_v1','done');
+    }
+    db=remote;
+    persistLocal();
+    cloudReady=true;
+    render();
+  })().catch(err=>{
+    cloudUser=null;cloudReady=false;
+    console.error('MY TRIP cloud sync error',err);
+    showAuthMessage('โหลดข้อมูลออนไลน์ไม่สำเร็จ กรุณาตรวจสอบการตั้งค่าฐานข้อมูลและลองเข้าสู่ระบบอีกครั้ง ('+err.message+')');
+    throw err;
+  }).finally(()=>{cloudLoadPromise=null});
+  return cloudLoadPromise;
+}
+async function saveRecord(bucket,data,oldId){
+  if(!cloudUser)throw new Error('กรุณาเข้าสู่ระบบก่อนบันทึกข้อมูล');
+  const cfg=tableMap[bucket], payload=cfg.from(data,cloudUser);
+  let query=supabaseClient.from(cfg.table);
+  let row;
+  if(oldId&&String(oldId).length===36){
+    row=await cloudRequest(query.update(payload).eq('id',oldId).select().single());
+  }else{
+    row=await cloudRequest(query.insert(payload).select().single());
+  }
+  const saved=cfg.to(row);
+  db[bucket]=db[bucket].filter(x=>x.id!==oldId&&x.id!==saved.id).concat(saved);
+  persistLocal();render();
+}
+async function deleteRecord(bucket,id){
+  if(!cloudUser)throw new Error('กรุณาเข้าสู่ระบบก่อนลบข้อมูล');
+  const cfg=tableMap[bucket];
+  await cloudRequest(supabaseClient.from(cfg.table).delete().eq('id',id));
+  db[bucket]=db[bucket].filter(x=>x.id!==id);persistLocal();render();
+}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function showPage(p){currentPage=p;document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));document.getElementById(p).classList.remove('hidden');document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x.dataset.page===p));let names={dashboard:'Good morning, Traveler ✨',trips:'My Trips',itinerary:'Itinerary',places:'Places',restaurants:'Restaurants & Cafés',maps:'Map & Routes',transport:'Transportation',stay:'Accommodation',expenses:'Expenses & Budget',reports:'Reports',group:'Group & Split'};document.getElementById('pageTitle').textContent=names[p];render()}
 document.querySelectorAll('.nav').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
 function tripOptions(){return db.trips.map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('')}
 function openModal(type,id=null){
-let existing=id?db[type==='activity'?'activities':type==='place'?'places':type==='restaurant'?'restaurants':type==='transport'?'transports':type==='stay'?'stays':type==='expense'?'expenses':'trips'].find(x=>x.id===id):null;
-let fields='',title='',bucket=type==='activity'?'activities':type==='place'?'places':type==='restaurant'?'restaurants':type==='transport'?'transports':type==='stay'?'stays':type==='expense'?'expenses':'trips';
+let bucket=type==='activity'?'activities':type==='place'?'places':type==='restaurant'?'restaurants':type==='transport'?'transports':type==='stay'?'stays':type==='expense'?'expenses':'trips';
+let existing=id?db[bucket].find(x=>x.id===id):null,fields='',title='';
 const f=(label,name,kind='text',value='')=>`<div class="field"><label>${label}</label><input name="${name}" type="${kind}" value="${esc(value)}"></div>`;
 const selectTrip=`<div class="field"><label>Trip</label><select name="tripId">${tripOptions()}</select></div>`;
 if(type==='trip'){title='Create a Trip';fields=f('Trip name','name','text',existing?.name)+f('Destination','destination','text',existing?.destination)+`<div class="formgrid">${f('Start date','start','date',existing?.start)}${f('End date','end','date',existing?.end)}</div>`+f('Budget (THB)','budget','number',existing?.budget||'')+f('Notes','notes','text',existing?.notes||'')}
-if(type==='activity'){title='Add Activity';fields=selectTrip+`<div class="formgrid">${f('Date','date','date')}${f('Time','time','time')}</div>`+f('Activity / Place','name')+f('Notes','notes')}
-if(type==='place'||type==='restaurant'){title=type==='place'?'Add Place':'Add Restaurant';fields=selectTrip+f('Name','name')+f('Address / Area','address')+f('Google Maps URL (optional)','url','url')+f('Estimated cost (THB)','cost','number')+f('Notes','notes')}
-if(type==='transport'){title='Add Transportation';fields=selectTrip+f('Type (Flight / Train / Bus / Car)','kind')+f('Route / Details','name')+f('Date & time','date','datetime-local')+f('Booking reference','ref')}
-if(type==='stay'){title='Add Accommodation';fields=selectTrip+f('Hotel / Accommodation','name')+f('Address','address')+`<div class="formgrid">${f('Check-in','start','date')}${f('Check-out','end','date')}</div>`+f('Booking reference','ref')+f('Cost (THB)','cost','number')}
-if(type==='expense'){title='Add Expense';fields=selectTrip+f('Expense description','name')+`<div class="formgrid">${f('Amount (THB)','amount','number')}${f('Date','date','date')}</div>`+`<div class="field"><label>Category</label><select name="category"><option>Food</option><option>Transport</option><option>Accommodation</option><option>Attraction</option><option>Shopping</option><option>Other</option></select></div>`+f('Notes','notes')}
-document.getElementById('modalRoot').innerHTML=`<div class="modalback" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modalhead"><h2>${title}</h2><button class="close" onclick="closeModal()">✕</button></div><form id="entryForm">${fields}<div class="row" style="justify-content:flex-end;margin-top:18px"><button type="button" onclick="closeModal()">Cancel</button><button class="primary" type="submit">Save</button></div></form></div></div>`;
-document.getElementById('entryForm').onsubmit=e=>{e.preventDefault();let data=Object.fromEntries(new FormData(e.target).entries());data.id=existing?.id||Date.now().toString();if(type==='trip')data.budget=Number(data.budget||0);if(type==='expense'||type==='stay'||type==='place'||type==='restaurant')data.amount=Number(data.amount||data.cost||0);db[bucket]=db[bucket].filter(x=>x.id!==data.id).concat(data);closeModal();save()};
+if(type==='activity'){title='Add Activity';fields=selectTrip+`<div class="formgrid">${f('Date','date','date',existing?.date)}${f('Time','time','time',existing?.time)}</div>`+f('Activity / Place','name','text',existing?.name)+f('Notes','notes','text',existing?.notes)}
+if(type==='place'||type==='restaurant'){title=type==='place'?'Add Place':'Add Restaurant';fields=selectTrip+f('Name','name','text',existing?.name)+f('Address / Area','address','text',existing?.address)+f('Google Maps URL (optional)','url','url',existing?.url)+f('Estimated cost (THB)','cost','number',existing?.cost||'')+f('Notes','notes','text',existing?.notes)}
+if(type==='transport'){title='Add Transportation';fields=selectTrip+f('Type (Flight / Train / Bus / Car)','kind','text',existing?.kind)+f('Route / Details','name','text',existing?.name)+f('Date & time','date','datetime-local',existing?.date)+f('Booking reference','ref','text',existing?.ref)}
+if(type==='stay'){title='Add Accommodation';fields=selectTrip+f('Hotel / Accommodation','name','text',existing?.name)+f('Address','address','text',existing?.address)+`<div class="formgrid">${f('Check-in','start','date',existing?.start)}${f('Check-out','end','date',existing?.end)}</div>`+f('Booking reference','ref','text',existing?.ref)+f('Cost (THB)','cost','number',existing?.cost||'')}
+if(type==='expense'){title='Add Expense';fields=selectTrip+f('Expense description','name','text',existing?.name)+`<div class="formgrid">${f('Amount (THB)','amount','number',existing?.amount||'')}${f('Date','date','date',existing?.date)}</div>`+`<div class="field"><label>Category</label><select name="category"><option>Food</option><option>Transport</option><option>Accommodation</option><option>Attraction</option><option>Shopping</option><option>Other</option></select></div>`+f('Notes','notes','text',existing?.notes)}
+document.getElementById('modalRoot').innerHTML=`<div class="modalback" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modalhead"><h2>${title}</h2><button class="close" onclick="closeModal()">✕</button></div><form id="entryForm">${fields}<div class="row" style="justify-content:flex-end;margin-top:18px"><button type="button" onclick="closeModal()">Cancel</button><button class="primary" id="saveEntryButton" type="submit">Save</button></div></form></div></div>`;
+const tripSelect=document.querySelector('#entryForm select[name="tripId"]');if(tripSelect&&existing?.tripId)tripSelect.value=existing.tripId;
+document.getElementById('entryForm').onsubmit=async e=>{e.preventDefault();const btn=document.getElementById('saveEntryButton');btn.disabled=true;btn.textContent='กำลังบันทึก...';try{let data=Object.fromEntries(new FormData(e.target).entries());if(type==='trip')data.budget=Number(data.budget||0);if(type==='expense'||type==='stay'||type==='place'||type==='restaurant')data.amount=Number(data.amount||data.cost||0);await saveRecord(bucket,data,existing?.id);closeModal()}catch(err){alert('บันทึกไม่สำเร็จ: '+err.message);btn.disabled=false;btn.textContent='Save'}};
 }
 function closeModal(){document.getElementById('modalRoot').innerHTML=''}
-function del(bucket,id){if(confirm('ลบรายการนี้ใช่ไหม?')){db[bucket]=db[bucket].filter(x=>x.id!==id);save()}}
+async function del(bucket,id){if(confirm('ลบรายการนี้ใช่ไหม?')){try{await deleteRecord(bucket,id)}catch(e){alert('ลบไม่สำเร็จ: '+e.message)}}}
 function tripName(id){return db.trips.find(t=>t.id===id)?.name||'ไม่ระบุทริป'}
-function card(item,bucket,extra=''){return `<div class="item"><div class="row" style="justify-content:space-between"><div><h3>${esc(item.name||item.kind||'รายการ')}</h3><p>${esc(extra||item.destination||item.address||item.date||'')}</p></div><div class="row"><button class="small danger" onclick="del('${bucket}','${item.id}')">Delete</button></div></div>${item.tripId?`<span class="pill">${esc(tripName(item.tripId))}</span>`:''}${item.notes?`<p>${esc(item.notes)}</p>`:''}${item.url?`<p><a target="_blank" href="${esc(item.url)}">เปิดลิงก์</a></p>`:''}</div>`}
+function card(item,bucket,extra=''){return `<div class="item"><div class="row" style="justify-content:space-between"><div><h3>${esc(item.name||item.kind||'รายการ')}</h3><p>${esc(extra||item.destination||item.address||item.date||'')}</p></div><div class="row"><button class="small danger" onclick="del('${bucket}','${item.id}')">Delete</button></div></div>${item.tripId?`<span class="pill">${esc(tripName(item.tripId))}</span>`:''}${item.notes?`<p>${esc(item.notes)}</p>`:''}${item.url?`<p><a target="_blank" rel="noopener" href="${esc(item.url)}">เปิดลิงก์</a></p>`:''}</div>`}
 function listOrEmpty(arr,bucket,extraFn){return arr.length?arr.map(x=>card(x,bucket,extraFn?extraFn(x):'')).join(''):'<div class="empty">ยังไม่มีข้อมูล กดปุ่มด้านบนเพื่อเพิ่มรายการแรกของคุณ</div>'}
 function render(){
 document.getElementById('statTrips').textContent=db.trips.length;document.getElementById('statPlaces').textContent=db.places.length;document.getElementById('statRestaurants').textContent=db.restaurants.length;let spent=db.expenses.reduce((a,x)=>a+Number(x.amount||0),0);document.getElementById('statSpent').textContent='฿'+spent.toLocaleString('th-TH');
 document.getElementById('dashboardTrips').innerHTML=db.trips.length?db.trips.slice(0,4).map(t=>`<div class="card"><div class="tripcover">✈️</div><h2>${esc(t.name)}</h2><p class="muted">${esc(t.destination)} · ${esc(t.start||'')} – ${esc(t.end||'')}</p><p class="muted">งบประมาณ ฿${Number(t.budget||0).toLocaleString('th-TH')}</p><button onclick="showPage('itinerary')">Open trip →</button></div>`).join(''):'<div class="empty">ยังไม่มีทริปของคุณ กด Create a Trip เพื่อเริ่มต้น</div>';
 document.getElementById('tripList').innerHTML=listOrEmpty(db.trips,'trips',t=>`${t.destination||''} · ${t.start||''} – ${t.end||''} · งบ ฿${Number(t.budget||0).toLocaleString('th-TH')}`);
 document.getElementById('itineraryList').innerHTML=listOrEmpty(db.activities,'activities',a=>`${a.date||''} ${a.time||''}`);
-document.getElementById('placeList').innerHTML=listOrEmpty(db.places,'places');
-document.getElementById('restaurantList').innerHTML=listOrEmpty(db.restaurants,'restaurants');
+document.getElementById('placeList').innerHTML=listOrEmpty(db.places,'places');document.getElementById('restaurantList').innerHTML=listOrEmpty(db.restaurants,'restaurants');
 document.getElementById('transportList').innerHTML=listOrEmpty(db.transports,'transports',x=>`${x.kind||''} · ${x.date||''} · ${x.ref||''}`);
 document.getElementById('stayList').innerHTML=listOrEmpty(db.stays,'stays',x=>`${x.address||''} · ${x.start||''} – ${x.end||''}`);
 document.getElementById('expenseList').innerHTML=listOrEmpty(db.expenses,'expenses',x=>`${x.category||''} · ${x.date||''} · ฿${Number(x.amount||0).toLocaleString('th-TH')}`);
 document.getElementById('expenseSummary').innerHTML=`<div class="stat"><small>TOTAL SPENT</small><div class="num">฿${spent.toLocaleString('th-TH')}</div></div><div class="stat"><small>EXPENSE ITEMS</small><div class="num">${db.expenses.length}</div></div><div class="stat"><small>TRIPS</small><div class="num">${db.trips.length}</div></div><div class="stat"><small>PLACES & RESTAURANTS</small><div class="num">${db.places.length+db.restaurants.length}</div></div>`;
-document.getElementById('mapLinks').innerHTML=[...db.places,...db.restaurants].length?[...db.places,...db.restaurants].map(x=>`<div class="item"><b>${esc(x.name)}</b><p>${esc(x.address||'')}</p><a target="_blank" href="${esc(x.url||('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(x.name+' '+(x.address||''))))}">เปิดใน Google Maps ↗</a></div>`).join(''):'<div class="empty">เพิ่มสถานที่หรือร้านอาหารก่อน แล้วลิงก์แผนที่จะปรากฏที่นี่</div>';
+document.getElementById('mapLinks').innerHTML=[...db.places,...db.restaurants].length?[...db.places,...db.restaurants].map(x=>`<div class="item"><b>${esc(x.name)}</b><p>${esc(x.address||'')}</p><a target="_blank" rel="noopener" href="${esc(x.url||('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(x.name+' '+(x.address||''))))}">เปิดใน Google Maps ↗</a></div>`).join(''):'<div class="empty">เพิ่มสถานที่หรือร้านอาหารก่อน แล้วลิงก์แผนที่จะปรากฏที่นี่</div>';
 document.getElementById('reportContent').innerHTML=`<h3>Travel Overview</h3><p>จำนวนทริป: <b>${db.trips.length}</b></p><p>สถานที่: <b>${db.places.length}</b></p><p>ร้านอาหาร: <b>${db.restaurants.length}</b></p><p>ค่าใช้จ่ายรวม: <b>฿${spent.toLocaleString('th-TH')}</b></p><button onclick="exportData()">Export Backup (JSON)</button> <button onclick="document.getElementById('importFile').click()">Import Backup</button><input id="importFile" type="file" accept=".json" class="hidden" onchange="importData(event)">`;
 }
 function exportData(){let blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='my-trip-backup.json';a.click();URL.revokeObjectURL(a.href)}
-function importData(e){let file=e.target.files[0];if(!file)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);keys.forEach(k=>db[k]=Array.isArray(d[k])?d[k]:[]);save();alert('นำเข้าข้อมูลเรียบร้อย')}catch{alert('ไฟล์ไม่ถูกต้อง')}};r.readAsText(file)}
+function importData(e){let file=e.target.files[0];if(!file)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);keys.forEach(k=>db[k]=Array.isArray(d[k])?d[k]:[]);persistLocal();alert('ไฟล์ถูกนำเข้าในเครื่องนี้แล้ว โปรดตรวจสอบข้อมูลก่อนใช้งาน')}catch{alert('ไฟล์ไม่ถูกต้อง')}};r.readAsText(file)}
 render();
 </script>
 </body>
