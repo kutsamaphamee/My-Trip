@@ -214,6 +214,7 @@ function card(item,bucket,extra=''){const readOnly=isReadOnlyRecord(item);return
 function listOrEmpty(arr,bucket,extraFn){return arr.length?arr.map(x=>card(x,bucket,extraFn?extraFn(x):'')).join(''):'<div class="empty">ยังไม่มีข้อมูล กดปุ่มด้านบนเพื่อเพิ่มรายการแรกของคุณ</div>'}
 function render(){
 const viewerOnly=db.trips.some(t=>t.ownerId!==cloudUser)&&!db.trips.some(t=>t.ownerId===cloudUser);
+document.querySelectorAll('button[onclick^="openModal("]').forEach(button=>button.style.display=viewerOnly?'none':'');
 document.getElementById('manageTripsButton').style.display=viewerOnly?'none':'';
 document.querySelectorAll('button[onclick="openModal(\'trip\')"]').forEach(button=>button.style.display=viewerOnly?'none':'');
 document.getElementById('statTrips').textContent=db.trips.length;document.getElementById('statPlaces').textContent=db.places.length;document.getElementById('statRestaurants').textContent=db.restaurants.length;let spent=db.expenses.reduce((a,x)=>a+Number(x.amount||0),0);document.getElementById('statSpent').textContent='฿'+spent.toLocaleString('th-TH');
